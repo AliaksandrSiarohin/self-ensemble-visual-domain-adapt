@@ -305,54 +305,74 @@ class RGB_128_256_down_gp(nn.Module):
     def __init__(self, n_classes):
         super(RGB_128_256_down_gp, self).__init__()
 
-        self.conv1_1 = nn.Conv2d(3, 128, (3, 3), padding=1)
-        self.conv1_1_bn = nn.BatchNorm2d(128)
-        self.conv1_2 = nn.Conv2d(128, 128, (3, 3), padding=1)
-        self.conv1_2_bn = nn.BatchNorm2d(128)
-        self.conv1_3 = nn.Conv2d(128, 128, (3, 3), padding=1)
-        self.conv1_3_bn = nn.BatchNorm2d(128)
-        self.pool1 = nn.MaxPool2d((2, 2))
-        self.drop1 = nn.Dropout()
+#        self.conv1_1 = nn.Conv2d(3, 128, (3, 3), padding=1)
+#        self.conv1_1_bn = nn.BatchNorm2d(128)
+#        self.conv1_2 = nn.Conv2d(128, 128, (3, 3), padding=1)
+#        self.conv1_2_bn = nn.BatchNorm2d(128)
+#        self.conv1_3 = nn.Conv2d(128, 128, (3, 3), padding=1)
+#        self.conv1_3_bn = nn.BatchNorm2d(128)
+#        self.pool1 = nn.MaxPool2d((2, 2))
+#        self.drop1 = nn.Dropout()
 
-        self.conv2_1 = nn.Conv2d(128, 256, (3, 3), padding=1)
-        self.conv2_1_bn = nn.BatchNorm2d(256)
-        self.conv2_2 = nn.Conv2d(256, 256, (3, 3), padding=1)
-        self.conv2_2_bn = nn.BatchNorm2d(256)
-        self.conv2_3 = nn.Conv2d(256, 256, (3, 3), padding=1)
-        self.conv2_3_bn = nn.BatchNorm2d(256)
-        self.pool2 = nn.MaxPool2d((2, 2))
-        self.drop2 = nn.Dropout()
+#        self.conv2_1 = nn.Conv2d(128, 256, (3, 3), padding=1)
+#        self.conv2_1_bn = nn.BatchNorm2d(256)
+#        self.conv2_2 = nn.Conv2d(256, 256, (3, 3), padding=1)
+#        self.conv2_2_bn = nn.BatchNorm2d(256)
+#        self.conv2_3 = nn.Conv2d(256, 256, (3, 3), padding=1)
+#        self.conv2_3_bn = nn.BatchNorm2d(256)
+#        self.pool2 = nn.MaxPool2d((2, 2))
+#        self.drop2 = nn.Dropout()
 
-        self.conv3_1 = nn.Conv2d(256, 512, (3, 3), padding=0)
-        self.conv3_1_bn = nn.BatchNorm2d(512)
-        self.nin3_2 = nn.Conv2d(512, 256, (1, 1), padding=1)
-        self.nin3_2_bn = nn.BatchNorm2d(256)
-        self.nin3_3 = nn.Conv2d(256, 128, (1, 1), padding=1)
-        self.nin3_3_bn = nn.BatchNorm2d(128)
+#        self.conv3_1 = nn.Conv2d(256, 512, (3, 3), padding=0)
+#        self.conv3_1_bn = nn.BatchNorm2d(512)
+#        self.nin3_2 = nn.Conv2d(512, 256, (1, 1), padding=1)
+#        self.nin3_2_bn = nn.BatchNorm2d(256)
+#        self.nin3_3 = nn.Conv2d(256, 128, (1, 1), padding=1)
+#        self.nin3_3_bn = nn.BatchNorm2d(128)
 
-        self.fc4 = nn.Linear(128, n_classes)
+#        self.fc4 = nn.Linear(128, n_classes)
+
+
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=5, padding=2)
+        self.bn1 = nn.BatchNorm2d(64, track_running_stats=False)
+
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=5, padding=2)
+        self.bn2 = nn.BatchNorm2d(64, track_running_stats=False)
+
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=5, padding=2)
+        self.bn3 = nn.BatchNorm2d(128, track_running_stats=False)
+
+        self.fc4 = nn.Linear(6272, 3072) #6272
+        self.bn4 = nn.BatchNorm1d(3072, track_running_stats=False)
+
+        self.fc5 = nn.Linear(3072, 2048)
+        self.bn5 = nn.BatchNorm1d(2048, track_running_stats=False)
+
+        self.fc6 = nn.Linear(2048, 10)
+        self.bn6 = nn.BatchNorm1d(10, track_running_stats=False)
 
     def forward(self, x):
-        x = F.relu(self.conv1_1_bn(self.conv1_1(x)))
-        x = F.relu(self.conv1_2_bn(self.conv1_2(x)))
-        x = self.pool1(F.relu(self.conv1_3_bn(self.conv1_3(x))))
-        x = self.drop1(x)
+        x = self.conv1(x)
+        x = F.max_pool2d(F.relu(self.bn1(x)), kernel_size=3, stride=2)
 
-        x = F.relu(self.conv2_1_bn(self.conv2_1(x)))
-        x = F.relu(self.conv2_2_bn(self.conv2_2(x)))
-        x = self.pool2(F.relu(self.conv2_3_bn(self.conv2_3(x))))
-        x = self.drop2(x)
+        x = self.conv2(x)
+        x = F.max_pool2d(F.relu(self.bn2(x)), kernel_size=3, stride=2)
 
-        x = F.relu(self.conv3_1_bn(self.conv3_1(x)))
-        x = F.relu(self.nin3_2_bn(self.nin3_2(x)))
-        x = F.relu(self.nin3_3_bn(self.nin3_3(x)))
+        x = self.conv3(x)
+        x = F.relu(self.bn3(x))
 
-        x = F.avg_pool2d(x, 6)
-        x = x.view(-1, 128)
-
+        x = x.view(x.shape[0], -1)
         x = self.fc4(x)
-        return x
+        x = F.dropout(F.relu(self.bn4(x)), training=self.training)
+        #x = F.relu(self.bnt4(x)*self.gamma4 + self.beta4)
 
+        x = self.fc5(x)
+        x = F.dropout(F.relu(self.bn5(x)), training=self.training)
+#x = F.relu(self.bnt5(x)*self.gamma5 + self.beta5)
+
+        x = self.fc6(x)
+        x = self.bn6(x)
+        return x 
 
 @architecture('rgb40-48-96-192-384-gp', (3, 40, 40))
 class RGB40_48_96_192_384_gp (nn.Module):
